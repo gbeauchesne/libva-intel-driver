@@ -97,6 +97,13 @@ source_h = \
 	object_heap.h           \
 	$(NULL)
 
+if USE_WAYLAND
+source_c			+= i965_output_wayland.c
+source_h			+= i965_output_wayland.h
+driver_cflags			+= $(WAYLAND_CFLAGS) $(WAYLAND_DRM_CFLAGS)
+driver_libs			+= $(WAYLAND_LIBS) $(WAYLAND_DRM_LIBS)
+endif
+
 i965_drv_video_la_LTLIBRARIES	= i965_drv_video.la
 i965_drv_video_ladir		= $(LIBVA_DRIVERS_PATH)
 i965_drv_video_la_CFLAGS	= $(driver_cflags)

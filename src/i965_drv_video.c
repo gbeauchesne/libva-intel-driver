@@ -41,6 +41,10 @@
 #include "i965_defines.h"
 #include "i965_drv_video.h"
 
+#if USE_WAYLAND
+# include "i965_output_wayland.h"
+#endif
+
 #define CONFIG_ID_OFFSET                0x01000000
 #define CONTEXT_ID_OFFSET               0x02000000
 #define SURFACE_ID_OFFSET               0x04000000
@@ -1592,6 +1596,11 @@ i965_Init(VADriverContextP ctx)
     if (i965_render_init(ctx) == False)
         return VA_STATUS_ERROR_UNKNOWN;
 
+#if USE_WAYLAND
+    if (!i965_output_wayland_init(ctx))
+        return VA_STATUS_ERROR_UNKNOWN;
+#endif
+
     _i965InitMutex(&i965->render_mutex);
     i965->batch = intel_batchbuffer_new(&i965->intel, I915_EXEC_RENDER);
 
@@ -2392,6 +2401,10 @@ i965_Terminate(VADriverContextP ctx)
         intel_batchbuffer_free(i965->batch);
 
     _i965DestroyMutex(&i965->render_mutex);
+
+#if USE_WAYLAND
+    i965_output_wayland_terminate(ctx);
+#endif
 
     if (i965_render_terminate(ctx) == False)
         return VA_STATUS_ERROR_UNKNOWN;

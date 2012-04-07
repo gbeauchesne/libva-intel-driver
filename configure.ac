@@ -40,6 +40,11 @@ m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])], [
     AC_SUBST(AM_DEFAULT_VERBOSITY)
 ])
 
+AC_ARG_ENABLE([wayland],
+    [AC_HELP_STRING([--enable-wayland],
+                    [build with Wayland support @<:@default=yes@:>@])],
+    [], [enable_wayland="yes"])
+
 AC_DISABLE_STATIC
 AC_PROG_LIBTOOL
 AC_PROG_CC
@@ -111,6 +116,52 @@ if test "$ac_cv_have_jpeg_decoding_api" = "yes"; then
         [Defined to 1 if VA-API exposes JPEG decoding])
 fi
 
+# Check for EGL
+if test "$enable_wayland" = "yes"; then
+    enable_egl="yes"
+fi
+
+USE_EGL="no"
+EGL_CFLAGS=""
+EGL_LIBS=""
+if test "$enable_egl" = "yes"; then
+    saved_CFLAGS="$CFLAGS"
+    saved_LIBS="$LIBS"
+    PKG_CHECK_MODULES([EGL], [egl], [], [EGL_LIBS="-lEGL"])
+    CFLAGS="$CFLAGS $EGL_CFLAGS"
+    LIBS="$LIBS $EGL_LIBS"
+    AC_CHECK_HEADERS([EGL/egl.h])
+    AC_CHECK_LIB(EGL, eglGetDisplay, [USE_EGL="yes"])
+    CFLAGS="$saved_CFLAGS"
+    LIBS="$saved_LIBS"
+fi
+AC_SUBST(EGL_CFLAGS)
+AC_SUBST(EGL_LIBS)
+AM_CONDITIONAL(USE_EGL, test "$USE_EGL" = "yes")
+
+# Check for Wayland
+USE_WAYLAND=0
+USE_WAYLAND_DRM=0
+WAYLAND_DRM_CFLAGS=""
+WAYLAND_DRM_LIBS=""
+if test "$enable_wayland" = "yes"; then
+    PKG_CHECK_MODULES([WAYLAND], [wayland-client], [USE_WAYLAND=1], [])
+    if test "$USE_EGL" = "yes"; then
+        USE_WAYLAND_DRM=1
+        WAYLAND_DRM_CFLAGS="$DRM_CFLAGS"
+	WAYLAND_DRM_LIBS="$DRM_LIBS $EGL_LIBS"
+    fi
+fi
+AC_DEFINE_UNQUOTED(USE_WAYLAND, $USE_WAYLAND,
+    [Defined to 1 if building the Wayland windowing system])
+AM_CONDITIONAL(USE_WAYLAND, test $USE_WAYLAND -eq 1)
+
+AC_SUBST([WAYLAND_DRM_CFLAGS])
+AC_SUBST([WAYLAND_DRM_LIBS])
+AC_DEFINE_UNQUOTED(USE_WAYLAND_DRM, $USE_WAYLAND_DRM,
+    [Defined to 1 if building the Wayland windowing system with DRM support])
+AM_CONDITIONAL(USE_WAYLAND_DRM, test $USE_WAYLAND_DRM -eq 1)
+
 AC_OUTPUT([
     Makefile
     debian.upstream/Makefile 
@@ -127,9 +178,13 @@ AC_OUTPUT([
 ])
 
 dnl Print summary
+WINSYS=""
+AS_IF([test $USE_WAYLAND -eq 1], [WINSYS="wayland $WINSYS"])
+
 echo
 echo $PACKAGE configuration summary:
 echo
 echo VA-API version ................... : $VA_VERSION_STR
 echo VA-API drivers path .............. : $LIBVA_DRIVERS_PATH
+echo Windowing systems ................ : $WINSYS
 echo
