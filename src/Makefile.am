@@ -98,7 +98,9 @@ source_h = \
 	$(NULL)
 
 if USE_WAYLAND
-source_c			+= i965_output_wayland.c
+SUBDIRS				+= wayland
+protocol_source_h		= wayland-drm-client-protocol.h
+source_c			+= i965_output_wayland.c $(protocol_source_h)
 source_h			+= i965_output_wayland.h
 driver_cflags			+= $(WAYLAND_CFLAGS) $(WAYLAND_DRM_CFLAGS)
 driver_libs			+= $(WAYLAND_LIBS) $(WAYLAND_DRM_LIBS)
@@ -111,6 +113,12 @@ i965_drv_video_la_LDFLAGS	= $(driver_ldflags)
 i965_drv_video_la_LIBADD	= $(driver_libs)
 i965_drv_video_la_SOURCES	= $(source_c)
 noinst_HEADERS			= $(source_h)
+
+# Wayland protocol
+i965_output_wayland.c: $(protocol_source_h)
+@wayland_scanner_rules@
+
+DIST_SUBDIRS = wayland
 
 # Extra clean files so that maintainer-clean removes *everything*
 MAINTAINERCLEANFILES = Makefile.in config.h.in

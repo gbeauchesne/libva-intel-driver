@@ -151,6 +151,8 @@ if test "$enable_wayland" = "yes"; then
         WAYLAND_DRM_CFLAGS="$DRM_CFLAGS"
 	WAYLAND_DRM_LIBS="$DRM_LIBS $EGL_LIBS"
     fi
+    m4_ifdef([WAYLAND_SCANNER_RULES],
+        [WAYLAND_SCANNER_RULES(['$(top_srcdir)/src/wayland'])])
 fi
 AC_DEFINE_UNQUOTED(USE_WAYLAND, $USE_WAYLAND,
     [Defined to 1 if building the Wayland windowing system])
@@ -175,6 +177,7 @@ AC_OUTPUT([
     src/shaders/post_processing/Makefile
     src/shaders/render/Makefile
     src/shaders/vme/Makefile
+    src/wayland/Makefile
 ])
 
 dnl Print summary
