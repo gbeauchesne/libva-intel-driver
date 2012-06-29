@@ -22,22 +22,81 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+#define _GNU_SOURCE 1
 #include "config.h"
+#include <stdlib.h>
 #include <string.h>
 #include <assert.h>
+#include <dlfcn.h>
 #include <va/va_dricommon.h>
 #include "i965_drv_video.h"
 #include "i965_output_dri.h"
 
+typedef void (*dri_generic_func)(void);
+typedef struct dri_drawable *(*dri_get_drawable_func)(
+    VADriverContextP ctx, XID drawable);
+typedef union dri_buffer *(*dri_get_rendering_buffer_func)(
+    VADriverContextP ctx, struct dri_drawable *d);
+typedef void (*dri_swap_buffer_func)(
+    VADriverContextP ctx, struct dri_drawable *d);
+
+struct dri_vtable {
+    dri_get_drawable_func               get_drawable;
+    dri_get_rendering_buffer_func       get_rendering_buffer;
+    dri_swap_buffer_func                swap_buffer;
+};
+
+static bool
+get_symbol(void *func_vptr, const char *name)
+{
+    dri_generic_func func, *func_ptr = func_vptr;
+    const char *error;
+
+    dlerror();
+    func = (dri_generic_func)dlsym(RTLD_DEFAULT, name);
+    error = dlerror();
+
+    if (error) {
+        fprintf(stderr, "error: failed to resolved %s() function: %s\n", name, error);
+        return false;
+    }
+
+    *func_ptr = func;
+    return true;
+}
+
 bool
 i965_output_dri_init(VADriverContextP ctx)
 {
+    struct i965_driver_data * const i965 = i965_driver_data(ctx); 
+    struct dri_vtable *vtable = NULL;
+
+    vtable = calloc(1, sizeof(*vtable));
+    if (!vtable)
+        return false;
+
+    if (!get_symbol(&vtable->get_drawable, "dri_get_drawable"))
+        goto error;
+    if (!get_symbol(&vtable->get_rendering_buffer, "dri_get_rendering_buffer"))
+        goto error;
+    if (!get_symbol(&vtable->swap_buffer, "dri_swap_buffer"))
+        goto error;
+
+    i965->dri_vtable = vtable;
     return true;
+
+error:
+    free(vtable);
+    return false;
 }
 
 void
 i965_output_dri_terminate(VADriverContextP ctx)
 {
+    struct i965_driver_data * const i965 = i965_driver_data(ctx); 
+
+    free(i965->dri_vtable);
+    i965->dri_vtable = NULL;
 }
 
 VAStatus
@@ -53,6 +112,7 @@ i965_put_surface_dri(
 )
 {
     struct i965_driver_data * const i965 = i965_driver_data(ctx); 
+    struct dri_vtable * const dri_vtable = i965->dri_vtable;
     struct dri_state * const dri_state = (struct dri_state *)ctx->drm_state;
     struct i965_render_state * const render_state = &i965->render_state;
     struct dri_drawable *dri_drawable;
@@ -77,10 +137,10 @@ i965_put_surface_dri(
 
     _i965LockMutex(&i965->render_mutex);
 
-    dri_drawable = dri_get_drawable(ctx, (Drawable)draw);
+    dri_drawable = dri_vtable->get_drawable(ctx, (Drawable)draw);
     assert(dri_drawable);
 
-    buffer = dri_get_rendering_buffer(ctx, dri_drawable);
+    buffer = dri_vtable->get_rendering_buffer(ctx, dri_drawable);
     assert(buffer);
     
     dest_region = render_state->draw_region;
@@ -129,7 +189,7 @@ i965_put_surface_dri(
         intel_render_put_subpicture(ctx, surface, src_rect, dst_rect);
     }
 
-    dri_swap_buffer(ctx, dri_drawable);
+    dri_vtable->swap_buffer(ctx, dri_drawable);
     obj_surface->flags |= SURFACE_DISPLAYED;
 
     if ((obj_surface->flags & SURFACE_ALL_MASK) == SURFACE_DISPLAYED) {

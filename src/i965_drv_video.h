@@ -232,6 +232,9 @@ struct i965_driver_data
     struct i965_render_state render_state;
     void *pp_context;
     char va_vendor[256];
+
+    /* dri_*() function hooks to libva-x11.so.* */
+    void *dri_vtable;
 };
 
 #define NEW_CONFIG_ID() object_heap_allocate(&i965->config_heap);
