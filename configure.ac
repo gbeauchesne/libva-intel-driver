@@ -41,6 +41,11 @@ m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])], [
     AC_SUBST(AM_DEFAULT_VERBOSITY)
 ])
 
+AC_ARG_ENABLE(egl,
+    [AC_HELP_STRING([--enable-egl],
+                    [build with VA/EGL API support @<:@default=yes@:>@])],
+    [], [enable_egl="yes"])
+
 AC_DISABLE_STATIC
 AC_PROG_LIBTOOL
 AC_PROG_CC
@@ -82,6 +87,15 @@ va_full_version_int=`expr ${VA_MAJOR_VERSION:-0} "*" 1000000 + \
 VA_DRIVER_INIT_FUNC="__vaDriverInit_${VA_MAJOR_VERSION}_${VA_MINOR_VERSION}"
 AC_DEFINE_UNQUOTED([VA_DRIVER_INIT_FUNC], [$VA_DRIVER_INIT_FUNC],
     [Define driver entry-point])
+
+dnl Check for VA/EGL API
+USE_EGL="$enable_egl"
+if test "$USE_EGL" = "yes"; then
+    PKG_CHECK_MODULES(LIBVA_EGL_DEPS, [libva-egl],
+      [AC_DEFINE([HAVE_VA_EGL], [1], [Defined to 1 if VA/EGL API is enabled])],
+      [USE_EGL="no"])
+fi
+AM_CONDITIONAL(USE_EGL, test "$USE_EGL" = "yes")
 
 dnl Check for VA-API drivers path
 AC_MSG_CHECKING([for VA drivers path])

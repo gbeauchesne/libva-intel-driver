@@ -105,5 +105,10 @@ i965_drv_video_la_LIBADD	= $(driver_libs)
 i965_drv_video_la_SOURCES	= $(source_c)
 noinst_HEADERS			= $(source_h)
 
+if USE_EGL
+source_c			+= i965_output_egl.c
+source_h			+= i965_output_egl.h
+endif
+
 # Extra clean files so that maintainer-clean removes *everything*
 MAINTAINERCLEANFILES = Makefile.in config.h.in

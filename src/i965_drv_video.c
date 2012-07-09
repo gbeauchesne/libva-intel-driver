@@ -35,6 +35,10 @@
 
 #include <va/va_dricommon.h>
 
+#ifdef HAVE_VA_EGL
+# include "i965_output_egl.h"
+#endif
+
 #include "intel_driver.h"
 #include "intel_memman.h"
 #include "intel_batchbuffer.h"
@@ -463,6 +467,13 @@ i965_destroy_surface(struct object_heap *heap, struct object_base *obj)
 {
     struct object_surface *obj_surface = (struct object_surface *)obj;
 
+#ifdef HAVE_VA_EGL
+    if (obj_surface->egl_client_buffer) {
+        i965_destroy_egl_client_buffer(obj_surface->egl_client_buffer);
+        obj_surface->egl_client_buffer = NULL;
+    }
+#endif
+
     dri_bo_unreference(obj_surface->bo);
     obj_surface->bo = NULL;
 
@@ -515,6 +526,9 @@ i965_CreateSurfaces(VADriverContextP ctx,
         obj_surface->private_data = NULL;
         obj_surface->free_private_data = NULL;
         obj_surface->subsampling = SUBSAMPLE_YUV420;
+#ifdef HAVE_VA_EGL
+        obj_surface->egl_client_buffer = NULL;
+#endif
     }
 
     /* Error recovery */
@@ -1588,6 +1602,11 @@ i965_Init(VADriverContextP ctx)
     if (i965_render_init(ctx) == False)
         return VA_STATUS_ERROR_UNKNOWN;
 
+#ifdef HAVE_VA_EGL
+    if (!i965_output_egl_init(ctx))
+        return VA_STATUS_ERROR_UNKNOWN;
+#endif
+
     _i965InitMutex(&i965->render_mutex);
     i965->batch = intel_batchbuffer_new(&i965->intel, I915_EXEC_RENDER);
 
@@ -2018,6 +2037,13 @@ i965_DestroyImage(VADriverContextP ctx, VAImageID image)
     if (!obj_image)
         return VA_STATUS_SUCCESS;
 
+#ifdef HAVE_VA_EGL
+    if (obj_image->egl_client_buffer) {
+        i965_destroy_egl_client_buffer(obj_image->egl_client_buffer);
+        obj_image->egl_client_buffer = NULL;
+    }
+#endif
+
     dri_bo_unreference(obj_image->bo);
     obj_image->bo = NULL;
 
@@ -2388,6 +2414,10 @@ i965_Terminate(VADriverContextP ctx)
         intel_batchbuffer_free(i965->batch);
 
     _i965DestroyMutex(&i965->render_mutex);
+
+#ifdef HAVE_VA_EGL
+    i965_output_egl_terminate(ctx);
+#endif
 
     if (i965_render_terminate(ctx) == False)
         return VA_STATUS_ERROR_UNKNOWN;

@@ -170,6 +170,7 @@ struct object_surface
     int cb_cr_width;
     int cb_cr_height;
     int cb_cr_pitch;
+    struct va_egl_client_buffer *egl_client_buffer;
 };
 
 struct object_buffer 
@@ -189,6 +190,7 @@ struct object_image
     dri_bo *bo;
     unsigned int *palette;
     VASurfaceID derived_surface;
+    struct va_egl_client_buffer *egl_client_buffer;
 };
 
 struct object_subpic 
