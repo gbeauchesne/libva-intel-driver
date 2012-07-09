@@ -40,6 +40,10 @@
 # include "i965_output_dri.h"
 #endif
 
+#ifdef HAVE_VA_EGL
+# include "i965_output_egl.h"
+#endif
+
 #ifdef HAVE_VA_WAYLAND
 # include "i965_output_wayland.h"
 #endif
@@ -566,6 +570,13 @@ i965_destroy_surface(struct object_heap *heap, struct object_base *obj)
 {
     struct object_surface *obj_surface = (struct object_surface *)obj;
 
+#ifdef HAVE_VA_EGL
+    if (obj_surface->egl_client_buffer) {
+        i965_destroy_egl_client_buffer(obj_surface->egl_client_buffer);
+        obj_surface->egl_client_buffer = NULL;
+    }
+#endif
+
     dri_bo_unreference(obj_surface->bo);
     obj_surface->bo = NULL;
 
@@ -632,6 +643,9 @@ i965_CreateSurfaces2(
         obj_surface->private_data = NULL;
         obj_surface->free_private_data = NULL;
         obj_surface->subsampling = SUBSAMPLE_YUV420;
+#ifdef HAVE_VA_EGL
+        obj_surface->egl_client_buffer = NULL;
+#endif
 
         if (expected_fourcc) {
             int tiling = HAS_TILED_SURFACE(i965);
@@ -2015,6 +2029,11 @@ i965_Init(VADriverContextP ctx)
         return VA_STATUS_ERROR_UNKNOWN;
 #endif
 
+#ifdef HAVE_VA_EGL
+    if (!i965_output_egl_init(ctx))
+        return VA_STATUS_ERROR_UNKNOWN;
+#endif
+
     _i965InitMutex(&i965->render_mutex);
     _i965InitMutex(&i965->pp_mutex);
 
@@ -2499,6 +2518,13 @@ i965_DestroyImage(VADriverContextP ctx, VAImageID image)
 
     if (!obj_image)
         return VA_STATUS_SUCCESS;
+
+#ifdef HAVE_VA_EGL
+    if (obj_image->egl_client_buffer) {
+        i965_destroy_egl_client_buffer(obj_image->egl_client_buffer);
+        obj_image->egl_client_buffer = NULL;
+    }
+#endif
 
     dri_bo_unreference(obj_image->bo);
     obj_image->bo = NULL;
@@ -3320,6 +3346,10 @@ i965_Terminate(VADriverContextP ctx)
 #ifdef HAVE_VA_WAYLAND
     if (IS_VA_WAYLAND(ctx))
         i965_output_wayland_terminate(ctx);
+#endif
+
+#ifdef HAVE_VA_EGL
+    i965_output_egl_terminate(ctx);
 #endif
 
     if (i965_render_terminate(ctx) == False)

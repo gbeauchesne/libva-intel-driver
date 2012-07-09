@@ -51,6 +51,11 @@ AC_ARG_ENABLE(x11,
                     [build with VA/X11 API support @<:@default=yes@:>@])],
     [], [enable_x11="yes"])
 
+AC_ARG_ENABLE(egl,
+    [AC_HELP_STRING([--enable-egl],
+                    [build with VA/EGL API support @<:@default=yes@:>@])],
+    [], [enable_egl="yes"])
+
 AC_ARG_ENABLE([wayland],
     [AC_HELP_STRING([--enable-wayland],
                     [build with VA/Wayland API support @<:@default=yes@:>@])],
@@ -121,6 +126,15 @@ if test "$USE_X11" = "yes"; then
 fi
 AM_CONDITIONAL(USE_X11, test "$USE_X11" = "yes")
 
+dnl Check for VA/EGL API
+USE_EGL="$enable_egl"
+if test "$USE_EGL" = "yes"; then
+    PKG_CHECK_MODULES(LIBVA_EGL_DEPS, [libva-egl],
+      [AC_DEFINE([HAVE_VA_EGL], [1], [Defined to 1 if VA/EGL API is enabled])],
+      [USE_EGL="no"])
+fi
+AM_CONDITIONAL(USE_EGL, test "$USE_EGL" = "yes")
+
 dnl Check for VA-API drivers path
 AC_MSG_CHECKING([for VA drivers path])
 LIBVA_DRIVERS_PATH=`$PKG_CONFIG libva --variable driverdir`
@@ -186,6 +200,7 @@ dnl Print summary
 BACKENDS=""
 AS_IF([test "$USE_DRM" = "yes"], [BACKENDS="$BACKENDS drm"])
 AS_IF([test "$USE_X11" = "yes"], [BACKENDS="$BACKENDS x11"])
+AS_IF([test "$USE_EGL" = "yes"], [BACKENDS="$BACKENDS egl"])
 AS_IF([test "$USE_WAYLAND" = "yes"], [BACKENDS="$BACKENDS wayland"])
 
 echo
