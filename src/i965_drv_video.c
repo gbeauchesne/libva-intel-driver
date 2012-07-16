@@ -37,6 +37,10 @@
 # include "i965_output_dri.h"
 #endif
 
+#ifdef HAVE_VA_DRM
+# include "i965_output_drm.h"
+#endif
+
 #include "intel_driver.h"
 #include "intel_memman.h"
 #include "intel_batchbuffer.h"
@@ -79,6 +83,10 @@
 /* Check whether we are rendering to X11 (VA/X11 or VA/GLX API) */
 #define IS_VA_X11(ctx) \
     (((ctx)->display_type & VA_DISPLAY_MAJOR_MASK) == VA_DISPLAY_X11)
+
+/* Check whether we are using the VA/DRM API */
+#define IS_VA_DRM(ctx) \
+    (((ctx)->display_type & VA_DISPLAY_MAJOR_MASK) == VA_DISPLAY_DRM)
 
 enum {
     I965_SURFACETYPE_RGBA = 1,
@@ -1598,6 +1606,11 @@ i965_Init(VADriverContextP ctx)
     if (i965_render_init(ctx) == False)
         return VA_STATUS_ERROR_UNKNOWN;
 
+#ifdef HAVE_VA_DRM
+    if (IS_VA_DRM(ctx) && !i965_output_drm_init(ctx))
+        return VA_STATUS_ERROR_UNKNOWN;
+#endif
+
 #ifdef HAVE_VA_X11
     if (IS_VA_X11(ctx) && !i965_output_dri_init(ctx))
         return VA_STATUS_ERROR_UNKNOWN;
@@ -2323,6 +2336,11 @@ i965_Terminate(VADriverContextP ctx)
 #ifdef HAVE_VA_X11
     if (IS_VA_X11(ctx))
         i965_output_dri_terminate(ctx);
+#endif
+
+#ifdef HAVE_VA_DRM
+    if (IS_VA_DRM(ctx))
+        i965_output_drm_terminate(ctx);
 #endif
 
     if (i965_render_terminate(ctx) == False)

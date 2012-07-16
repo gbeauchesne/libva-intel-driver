@@ -109,5 +109,10 @@ source_c			+= i965_output_dri.c
 source_h			+= i965_output_dri.h
 endif
 
+if USE_DRM
+source_c			+= i965_output_drm.c
+source_h			+= i965_output_drm.c
+endif
+
 # Extra clean files so that maintainer-clean removes *everything*
 MAINTAINERCLEANFILES = Makefile.in config.h.in
