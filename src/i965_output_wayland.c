@@ -129,6 +129,32 @@ create_planar_buffer(
     return (struct wl_buffer *)id;
 }
 
+/* Set picture structure to Wayland buffer, based on client flags */
+static void
+set_picture_structure(
+    struct va_wl_output *wl_output,
+    struct wl_buffer    *buffer,
+    unsigned int         flags
+)
+{
+    struct wl_vtable * const wl_vtable = &wl_output->vtable;
+    unsigned int picture_structure;
+
+    if (flags & VA_TOP_FIELD)
+        picture_structure = WL_DRM_PICTURE_STRUCTURE_TOP_FIELD;
+    else if (flags & VA_BOTTOM_FIELD)
+        picture_structure = WL_DRM_PICTURE_STRUCTURE_BOTTOM_FIELD;
+    else
+        picture_structure = WL_DRM_PICTURE_STRUCTURE_FRAME;
+
+    wl_vtable->proxy_marshal(
+        (struct wl_proxy *)wl_output->wl_drm,
+        WL_DRM_BUFFER_SET_PICTURE_STRUCTURE,
+        buffer,
+        picture_structure
+    );
+}
+
 /* Hook to return Wayland buffer associated with the VA surface */
 static VAStatus
 va_GetSurfaceBufferWl(
@@ -147,9 +173,6 @@ va_GetSurfaceBufferWl(
     obj_surface = SURFACE(surface);
     if (!obj_surface)
         return VA_STATUS_ERROR_INVALID_SURFACE;
-
-    if (flags != VA_FRAME_PICTURE)
-        return VA_STATUS_ERROR_FLAG_NOT_SUPPORTED;
 
     if (!out_buffer)
         return VA_STATUS_ERROR_INVALID_PARAMETER;
@@ -214,6 +237,8 @@ va_GetSurfaceBufferWl(
     );
     if (!buffer)
         return VA_STATUS_ERROR_ALLOCATION_FAILED;
+
+    set_picture_structure(i965->wl_output, buffer, flags);
 
     *out_buffer = buffer;
     return VA_STATUS_SUCCESS;

@@ -100,6 +100,18 @@
       <entry name="yvu444" value="0x34325659"/>
     </enum>
 
+    <enum name="picture_structure">
+      <description summary="buffer picture structure">
+        Picture structure.
+      </description>
+      <entry name="frame" value="0"
+             summary="Buffer represents the whole frame"/>
+      <entry name="top_field" value="1"
+             summary="Buffer represents the top field"/>
+      <entry name="bottom_field" value="2"
+             summary="Buffer represents the bottom field"/>
+    </enum>
+
     <!-- Call this request with the magic received from drmGetMagic().
          It will be passed on to the drmAuthMagic() or
          DRIAuthConnection() call.  This authentication must be
@@ -133,6 +145,12 @@
       <arg name="stride1" type="int"/>
       <arg name="offset2" type="int"/>
       <arg name="stride2" type="int"/>
+    </request>
+
+    <!-- Assign picture structure to DRM buffer -->
+    <request name="buffer_set_picture_structure">
+      <arg name="buffer" type="object" interface="wl_buffer"/>
+      <arg name="picture_structure" type="uint"/>
     </request>
 
     <!-- Notification of the path of the drm device which is used by

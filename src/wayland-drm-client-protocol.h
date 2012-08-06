@@ -115,6 +115,23 @@ enum wl_drm_format {
 };
 #endif /* WL_DRM_FORMAT_ENUM */
 
+#ifndef WL_DRM_PICTURE_STRUCTURE_ENUM
+#define WL_DRM_PICTURE_STRUCTURE_ENUM
+/**
+ * wl_drm_picture_structure - wl_drm
+ * @WL_DRM_PICTURE_STRUCTURE_FRAME: WL_DRM
+ * @WL_DRM_PICTURE_STRUCTURE_TOP_FIELD: WL_DRM
+ * @WL_DRM_PICTURE_STRUCTURE_BOTTOM_FIELD: WL_DRM
+ *
+ * Picture structure.
+ */
+enum wl_drm_picture_structure {
+	WL_DRM_PICTURE_STRUCTURE_FRAME = 0,
+	WL_DRM_PICTURE_STRUCTURE_TOP_FIELD = 1,
+	WL_DRM_PICTURE_STRUCTURE_BOTTOM_FIELD = 2,
+};
+#endif /* WL_DRM_PICTURE_STRUCTURE_ENUM */
+
 struct wl_drm_listener {
 	/**
 	 * device - device
@@ -148,6 +165,7 @@ wl_drm_add_listener(struct wl_drm *wl_drm,
 #define WL_DRM_AUTHENTICATE	0
 #define WL_DRM_CREATE_BUFFER	1
 #define WL_DRM_CREATE_PLANAR_BUFFER	2
+#define WL_DRM_BUFFER_SET_PICTURE_STRUCTURE	3
 
 static inline void
 wl_drm_set_user_data(struct wl_drm *wl_drm, void *user_data)
@@ -204,6 +222,13 @@ wl_drm_create_planar_buffer(struct wl_drm *wl_drm, uint32_t name, int32_t width,
 			 WL_DRM_CREATE_PLANAR_BUFFER, id, name, width, height, format, offset0, stride0, offset1, stride1, offset2, stride2);
 
 	return (struct wl_buffer *) id;
+}
+
+static inline void
+wl_drm_buffer_set_picture_structure(struct wl_drm *wl_drm, struct wl_buffer *buffer, uint32_t picture_structure)
+{
+	wl_proxy_marshal((struct wl_proxy *) wl_drm,
+			 WL_DRM_BUFFER_SET_PICTURE_STRUCTURE, buffer, picture_structure);
 }
 
 #ifdef  __cplusplus
