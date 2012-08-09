@@ -196,24 +196,12 @@ i965_destroy_egl_client_buffer(void *buffer)
     va_egl_client_buffer_destroy(buffer);
 }
 
-static void
-va_buffer_info_init(
-    VABufferInfoEGL             *out_buffer_info,
-    struct va_egl_client_buffer *buf
-)
-{
-    out_buffer_info->buffer    = buf;
-    out_buffer_info->structure = buf->structure;
-    out_buffer_info->width     = buf->width;
-    out_buffer_info->height    = buf->height;
-}
-
-/* Hook to return buffer info associated with the VA surface */
+/* Hook to return an EGL client buffer associated with the VA surface */
 static VAStatus
 va_GetSurfaceBufferEGL(
     VADriverContextP    ctx,
     VASurfaceID         surface,
-    VABufferInfoEGL    *out_buffer_info
+    EGLClientBuffer    *out_buffer
 )
 {
     struct i965_driver_data * const i965 = i965_driver_data(ctx);
@@ -224,7 +212,7 @@ va_GetSurfaceBufferEGL(
     if (!obj_surface)
         return VA_STATUS_ERROR_INVALID_SURFACE;
 
-    if (!out_buffer_info)
+    if (!out_buffer)
         return VA_STATUS_ERROR_INVALID_PARAMETER;
 
     buf = obj_surface->egl_client_buffer;
@@ -235,16 +223,16 @@ va_GetSurfaceBufferEGL(
         obj_surface->egl_client_buffer = buf;
     }
 
-    va_buffer_info_init(out_buffer_info, buf);
+    *out_buffer = buf;
     return VA_STATUS_SUCCESS;
 }
 
-/* Hook to return buffer info associated with the VA image */
+/* Hook to return an EGL client buffer associated with the VA image */
 VAStatus
 va_GetImageBufferEGL(
     VADriverContextP    ctx,
     VAImageID           image,
-    VABufferInfoEGL    *out_buffer_info
+    EGLClientBuffer    *out_buffer
 )
 {
     struct i965_driver_data * const i965 = i965_driver_data(ctx);
@@ -259,7 +247,7 @@ va_GetImageBufferEGL(
     if (obj_image->palette)
         return VA_STATUS_ERROR_INVALID_IMAGE_FORMAT;
 
-    if (!out_buffer_info)
+    if (!out_buffer)
         return VA_STATUS_ERROR_INVALID_PARAMETER;
 
     buf = obj_image->egl_client_buffer;
@@ -270,7 +258,40 @@ va_GetImageBufferEGL(
         obj_image->egl_client_buffer = buf;
     }
 
-    va_buffer_info_init(out_buffer_info, buf);
+    *out_buffer = buf;
+    return VA_STATUS_SUCCESS;
+}
+
+/* Hook to query VA/EGL buffer attributes */
+VAStatus
+va_GetBufferAttributeEGL(
+    VADriverContextP    ctx,
+    EGLClientBuffer     buffer,
+    EGLenum             attribute,
+    EGLint             *value
+)
+{
+    struct va_egl_client_buffer * const buf = buffer;
+
+    if (!buf || buf->version != VA_EGL_CLIENT_BUFFER_VERSION)
+        return VA_STATUS_ERROR_INVALID_BUFFER;
+
+    if (!value)
+        return VA_STATUS_ERROR_INVALID_PARAMETER;
+
+    switch (attribute) {
+    case EGL_WIDTH:
+        *value = buf->width;
+        break;
+    case EGL_HEIGHT:
+        *value = buf->height;
+        break;
+    case EGL_TEXTURE_FORMAT:
+        *value = buf->structure;
+        break;
+    default:
+        return VA_STATUS_ERROR_INVALID_PARAMETER;
+    }
     return VA_STATUS_SUCCESS;
 }
 
@@ -284,9 +305,10 @@ i965_output_egl_init(VADriverContextP ctx)
         return false;
     ctx->vtable_egl = vtable;
 
-    vtable->version               = VA_EGL_VTABLE_VERSION;
-    vtable->vaGetSurfaceBufferEGL = va_GetSurfaceBufferEGL;
-    vtable->vaGetImageBufferEGL   = va_GetImageBufferEGL;
+    vtable->version                     = VA_EGL_VTABLE_VERSION;
+    vtable->vaGetSurfaceBufferEGL       = va_GetSurfaceBufferEGL;
+    vtable->vaGetImageBufferEGL         = va_GetImageBufferEGL;
+    vtable->vaGetBufferAttributeEGL     = va_GetBufferAttributeEGL;
     return true;
 }
 
