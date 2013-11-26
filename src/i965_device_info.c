@@ -102,7 +102,6 @@ static const struct hw_codec_info snb_hw_codec_info = {
     .h264_dec_chroma_formats = EXTRA_H264_DEC_CHROMA_FORMATS,
 
     .has_mpeg2_decoding = 1,
-    .has_mpeg2_encoding = 1,
     .has_h264_decoding = 1,
     .has_h264_encoding = 1,
     .has_vc1_decoding = 1,
