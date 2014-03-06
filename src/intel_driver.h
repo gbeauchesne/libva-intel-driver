@@ -192,6 +192,8 @@ struct intel_region
 #define IS_CHERRYVIEW(device_info)      (device_info->is_cherryview)
 #define IS_GEN8(device_info)            (device_info->gen == 8)
 
+#define IS_GEN9(device_info)            (device_info->gen == 9)
+
 #ifndef I915_EXEC_VEBOX
 #define I915_EXEC_VEBOX         4
 #endif
