@@ -41,6 +41,8 @@
 #include "i965_render.h"
 #include "intel_media.h"
 
+#include "gen8_post_processing.h"
+
 #define HAS_BLENDING(ctx) ((ctx)->codec_info->has_blending)
 
 #define SURFACE_STATE_PADDED_SIZE               SURFACE_STATE_PADDED_SIZE_GEN8
@@ -53,28 +55,6 @@
 #define GPU_ASM_X_OFFSET_ALIGNMENT  4
 
 #define VA_STATUS_SUCCESS_1                     0xFFFFFFFE
-
-static VAStatus pp_null_initialize(VADriverContextP ctx, struct i965_post_processing_context *pp_context,
-                                   const struct i965_surface *src_surface,
-                                   const VARectangle *src_rect,
-                                   struct i965_surface *dst_surface,
-                                   const VARectangle *dst_rect,
-                                   void *filter_param);
-
-static VAStatus gen8_pp_nv12_blending_initialize(VADriverContextP ctx,
-                                           struct i965_post_processing_context *pp_context,
-                                           const struct i965_surface *src_surface,
-                                           const VARectangle *src_rect,
-                                           struct i965_surface *dst_surface,
-                                           const VARectangle *dst_rect,
-                                           void *filter_param);
-
-static VAStatus gen8_pp_plx_avs_initialize(VADriverContextP ctx, struct i965_post_processing_context *pp_context,
-                                           const struct i965_surface *src_surface,
-                                           const VARectangle *src_rect,
-                                           struct i965_surface *dst_surface,
-                                           const VARectangle *dst_rect,
-                                           void *filter_param);
 
 /* TODO: Modify the shader and then compile it again.
  * Currently it is derived from Haswell*/
@@ -664,7 +644,7 @@ pp_null_set_block_parameter(struct i965_post_processing_context *pp_context, int
     return 0;
 }
 
-static VAStatus
+VAStatus
 pp_null_initialize(VADriverContextP ctx, struct i965_post_processing_context *pp_context,
                    const struct i965_surface *src_surface,
                    const VARectangle *src_rect,
@@ -765,7 +745,7 @@ static void gen7_update_src_surface_uv_offset(VADriverContextP    ctx,
     }
 }
 
-static VAStatus
+VAStatus
 gen8_pp_plx_avs_initialize(VADriverContextP ctx, struct i965_post_processing_context *pp_context,
                            const struct i965_surface *src_surface,
                            const VARectangle *src_rect,
@@ -1019,7 +999,7 @@ gen7_pp_blending_set_block_parameter(struct i965_post_processing_context *pp_con
     return 0;
 }
 
-static VAStatus
+VAStatus
 gen8_pp_nv12_blending_initialize(VADriverContextP ctx, struct i965_post_processing_context *pp_context,
                            const struct i965_surface *src_surface,
                            const VARectangle *src_rect,
@@ -1505,9 +1485,11 @@ gen8_post_processing_context_finalize(struct i965_post_processing_context *pp_co
 #define VPP_CURBE_ALLOCATION_SIZE	32
 
 void
-gen8_post_processing_context_init(VADriverContextP ctx,
-                                  void *data,
-                                  struct intel_batchbuffer *batch)
+gen8_post_processing_context_common_init(VADriverContextP ctx,
+                                         void *data,
+                                         struct pp_module *pp_modules,
+                                         int num_pp_modules,
+                                         struct intel_batchbuffer *batch)
 {
     struct i965_driver_data *i965 = i965_driver_data(ctx);
     int i, kernel_size;
@@ -1516,20 +1498,18 @@ gen8_post_processing_context_init(VADriverContextP ctx,
     struct pp_module *pp_module;
     struct i965_post_processing_context *pp_context = data;
 
-    {
-	pp_context->vfe_gpu_state.max_num_threads = 60;
-	pp_context->vfe_gpu_state.num_urb_entries = 59;
-	pp_context->vfe_gpu_state.gpgpu_mode = 0;
-	pp_context->vfe_gpu_state.urb_entry_size = 16 - 1;
-	pp_context->vfe_gpu_state.curbe_allocation_size = VPP_CURBE_ALLOCATION_SIZE;
-    }
+    pp_context->vfe_gpu_state.max_num_threads = 60;
+    pp_context->vfe_gpu_state.num_urb_entries = 59;
+    pp_context->vfe_gpu_state.gpgpu_mode = 0;
+    pp_context->vfe_gpu_state.urb_entry_size = 16 - 1;
+    pp_context->vfe_gpu_state.curbe_allocation_size = VPP_CURBE_ALLOCATION_SIZE;
 
     pp_context->intel_post_processing = gen8_post_processing;
     pp_context->finalize = gen8_post_processing_context_finalize;
 
-    assert(NUM_PP_MODULES == ARRAY_ELEMS(pp_modules_gen8));
+    assert(ARRAY_ELEMS(pp_context->pp_modules) == num_pp_modules);
 
-    memcpy(pp_context->pp_modules, pp_modules_gen8, sizeof(pp_context->pp_modules));
+    memcpy(pp_context->pp_modules, pp_modules, sizeof(pp_context->pp_modules));
 
     kernel_size = 4096 ;
 
@@ -1590,4 +1570,10 @@ gen8_post_processing_context_init(VADriverContextP ctx,
     pp_context->curbe_size = 256;
 }
 
-
+void
+gen8_post_processing_context_init(VADriverContextP ctx,
+                                  void *data,
+                                  struct intel_batchbuffer *batch)
+{
+    gen8_post_processing_context_common_init(ctx, data, pp_modules_gen8, ARRAY_ELEMS(pp_modules_gen8), batch);
+}
