@@ -1070,7 +1070,7 @@ gen8_pp_nv12_blending_initialize(VADriverContextP ctx, struct i965_post_processi
     return VA_STATUS_SUCCESS;
 }
 
-static VAStatus
+VAStatus
 gen8_pp_initialize(
     VADriverContextP   ctx,
     struct i965_post_processing_context *pp_context,
@@ -1215,7 +1215,7 @@ gen8_pp_upload_constants(VADriverContextP ctx,
     return;
 }
 
-static void
+void
 gen8_pp_states_setup(VADriverContextP ctx,
                      struct i965_post_processing_context *pp_context)
 {
@@ -1269,7 +1269,7 @@ gen8_pp_state_base_address(VADriverContextP ctx,
     ADVANCE_BATCH(batch);
 }
 
-static void
+void
 gen8_pp_vfe_state(VADriverContextP ctx,
                   struct i965_post_processing_context *pp_context)
 {
@@ -1294,7 +1294,7 @@ gen8_pp_vfe_state(VADriverContextP ctx,
     ADVANCE_BATCH(batch);
 }
 
-static void
+void
 gen8_interface_descriptor_load(VADriverContextP ctx,
                                struct i965_post_processing_context *pp_context)
 {
@@ -1313,7 +1313,7 @@ gen8_interface_descriptor_load(VADriverContextP ctx,
     ADVANCE_BATCH(batch);
 }
 
-static void
+void
 gen8_pp_curbe_load(VADriverContextP ctx,
                    struct i965_post_processing_context *pp_context)
 {
@@ -1332,7 +1332,7 @@ gen8_pp_curbe_load(VADriverContextP ctx,
     ADVANCE_BATCH(batch);
 }
 
-static void
+void
 gen8_pp_object_walker(VADriverContextP ctx,
                       struct i965_post_processing_context *pp_context)
 {
