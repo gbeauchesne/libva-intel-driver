@@ -247,13 +247,16 @@ intel_batchbuffer_emit_mi_flush(struct intel_batchbuffer *batch)
             }
 
         } else {
+            const uint32_t extra_dword = !!IS_GEN8(intel->device_id);
             uint32_t cmd = MI_FLUSH_DW;
             if (batch->flag == I915_EXEC_BSD)
                 cmd |= MI_FLUSH_DW_VIDEO_PIPELINE_CACHE_INVALIDATE;
 
-            __BEGIN_BATCH(batch, 4, batch->flag);
-            __OUT_BATCH(batch, cmd);
+            __BEGIN_BATCH(batch, 4|extra_dword, batch->flag);
+            __OUT_BATCH(batch, cmd|extra_dword);
             __OUT_BATCH(batch, 0);
+            if (extra_dword)
+                __OUT_BATCH(batch, 0);
             __OUT_BATCH(batch, 0);
             __OUT_BATCH(batch, 0);
             __ADVANCE_BATCH(batch);
