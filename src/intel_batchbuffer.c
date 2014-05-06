@@ -247,29 +247,16 @@ intel_batchbuffer_emit_mi_flush(struct intel_batchbuffer *batch)
             }
 
         } else {
-            if (batch->flag == I915_EXEC_BLT) {
-                BEGIN_BLT_BATCH(batch, 4);
-                OUT_BLT_BATCH(batch, MI_FLUSH_DW);
-                OUT_BLT_BATCH(batch, 0);
-                OUT_BLT_BATCH(batch, 0);
-                OUT_BLT_BATCH(batch, 0);
-                ADVANCE_BLT_BATCH(batch);
-            }else if (batch->flag == I915_EXEC_VEBOX) {
-                BEGIN_VEB_BATCH(batch, 4);
-                OUT_VEB_BATCH(batch, MI_FLUSH_DW);
-                OUT_VEB_BATCH(batch, 0);
-                OUT_VEB_BATCH(batch, 0);
-                OUT_VEB_BATCH(batch, 0);
-                ADVANCE_VEB_BATCH(batch);
-            } else {
-                assert(batch->flag == I915_EXEC_BSD);
-                BEGIN_BCS_BATCH(batch, 4);
-                OUT_BCS_BATCH(batch, MI_FLUSH_DW | MI_FLUSH_DW_VIDEO_PIPELINE_CACHE_INVALIDATE);
-                OUT_BCS_BATCH(batch, 0);
-                OUT_BCS_BATCH(batch, 0);
-                OUT_BCS_BATCH(batch, 0);
-                ADVANCE_BCS_BATCH(batch);
-            }
+            uint32_t cmd = MI_FLUSH_DW;
+            if (batch->flag == I915_EXEC_BSD)
+                cmd |= MI_FLUSH_DW_VIDEO_PIPELINE_CACHE_INVALIDATE;
+
+            __BEGIN_BATCH(batch, 4, batch->flag);
+            __OUT_BATCH(batch, cmd);
+            __OUT_BATCH(batch, 0);
+            __OUT_BATCH(batch, 0);
+            __OUT_BATCH(batch, 0);
+            __ADVANCE_BATCH(batch);
         }
     } else {
         if (batch->flag == I915_EXEC_RENDER) {
