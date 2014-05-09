@@ -101,8 +101,13 @@ struct object_config
 
 #define NUM_SLICES     10
 
+struct codec_state_base {
+    uint32_t chroma_formats;
+};
+
 struct decode_state
 {
+    struct codec_state_base base;
     struct buffer_store *pic_param;
     struct buffer_store **slice_params;
     struct buffer_store *iq_matrix;
@@ -125,6 +130,7 @@ struct decode_state
 
 struct encode_state
 {
+    struct codec_state_base base;
     struct buffer_store *seq_param;
     struct buffer_store *pic_param;
     struct buffer_store *pic_control;
@@ -175,6 +181,7 @@ struct encode_state
 
 struct proc_state
 {
+    struct codec_state_base base;
     struct buffer_store *pipeline_param;
 
     VASurfaceID current_render_target;
@@ -186,6 +193,7 @@ struct proc_state
 
 union codec_state
 {
+    struct codec_state_base base;
     struct decode_state decode;
     struct encode_state encode;
     struct proc_state proc;
@@ -316,6 +324,9 @@ struct hw_codec_info
     int max_height;
     int min_linear_wpitch;
     int min_linear_hpitch;
+
+    unsigned int h264_dec_chroma_formats;
+    unsigned int jpeg_dec_chroma_formats;
 
     unsigned int has_mpeg2_decoding:1;
     unsigned int has_mpeg2_encoding:1;

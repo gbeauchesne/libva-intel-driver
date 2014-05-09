@@ -27,6 +27,10 @@
 #include <stdlib.h>
 #include "i965_drv_video.h"
 
+/* Extra set of chroma formats supported for H.264 decoding (beyond YUV 4:2:0) */
+#define EXTRA_H264_DEC_CHROMA_FORMATS \
+    (VA_RT_FORMAT_YUV400)
+
 /* Extra set of chroma formats supported for JPEG decoding (beyond YUV 4:2:0) */
 #define EXTRA_JPEG_DEC_CHROMA_FORMATS \
     (VA_RT_FORMAT_YUV400 | VA_RT_FORMAT_YUV411 | VA_RT_FORMAT_YUV422 | \
@@ -67,6 +71,8 @@ static const struct hw_codec_info ilk_hw_codec_info = {
     .max_height = 2048,
     .min_linear_wpitch = 16,
     .min_linear_hpitch = 16,
+
+    .h264_dec_chroma_formats = EXTRA_H264_DEC_CHROMA_FORMATS,
 
     .has_mpeg2_decoding = 1,
     .has_h264_decoding = 1,
@@ -122,6 +128,7 @@ static const struct hw_codec_info ivb_hw_codec_info = {
     .min_linear_wpitch = 64,
     .min_linear_hpitch = 16,
 
+    .h264_dec_chroma_formats = EXTRA_H264_DEC_CHROMA_FORMATS,
     .jpeg_dec_chroma_formats = EXTRA_JPEG_DEC_CHROMA_FORMATS,
 
     .has_mpeg2_decoding = 1,
@@ -159,6 +166,7 @@ static const struct hw_codec_info hsw_hw_codec_info = {
     .min_linear_wpitch = 64,
     .min_linear_hpitch = 16,
 
+    .h264_dec_chroma_formats = EXTRA_H264_DEC_CHROMA_FORMATS,
     .jpeg_dec_chroma_formats = EXTRA_JPEG_DEC_CHROMA_FORMATS,
 
     .has_mpeg2_decoding = 1,
@@ -202,6 +210,7 @@ static const struct hw_codec_info bdw_hw_codec_info = {
     .min_linear_wpitch = 64,
     .min_linear_hpitch = 16,
 
+    .h264_dec_chroma_formats = EXTRA_H264_DEC_CHROMA_FORMATS,
     .jpeg_dec_chroma_formats = EXTRA_JPEG_DEC_CHROMA_FORMATS,
 
     .has_mpeg2_decoding = 1,
