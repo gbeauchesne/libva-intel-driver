@@ -1209,17 +1209,8 @@ gen75_mfc_avc_pipeline_slice_programing(VADriverContextP ctx,
                                           1, 0, 1, slice_batch);
 
            } else {
-                /* generate one mvc prefix nal */
-               slice_header_length_in_bits = build_avc_mvc_prefix_nal_unit(mvc_seq_param,
-                                                                           mvc_pic_param,
-                                                                           mvc_slice_param,
-                                                                           &slice_header);
-               mfc_context->insert_object(ctx, encoder_context,
-                                          (unsigned int *)slice_header, ALIGN(slice_header_length_in_bits, 32) >> 5, slice_header_length_in_bits & 0x1f,
-                                          8,  /* first 8 bytes are start code + nal unit type + svc ext flag +  mvc nal extension */
-                                          0, 0, 1, slice_batch);
-               free(slice_header);
 
+               intel_avc_slice_insert_packed_data(ctx, encode_state, encoder_context, slice_index, slice_batch);
                /* generate one common H264 slice header */
                slice_header_length_in_bits = build_avc_slice_header(pSequenceParameter,
                                                                     pPicParameter,
@@ -1241,6 +1232,8 @@ gen75_mfc_avc_pipeline_slice_programing(VADriverContextP ctx,
 
         if ( slice_index == 0)
             intel_mfc_avc_pipeline_header_programing(ctx, encode_state, encoder_context, slice_batch);
+
+         intel_avc_slice_insert_packed_data(ctx, encode_state, encoder_context, slice_index, slice_batch);
 
          slice_header_length_in_bits = build_avc_slice_header(pSequenceParameter, pPicParameter, pSliceParameter, &slice_header);
 
@@ -1614,16 +1607,7 @@ gen75_mfc_avc_batchbuffer_slice(VADriverContextP ctx,
                                        1, 0, 1, slice_batch);
 
          } else {
-            /* generate one mvc prefix nal */
-            slice_header_length_in_bits = build_avc_mvc_prefix_nal_unit(mvc_seq_param,
-                                                                        mvc_pic_param,
-                                                                        slice_param,
-                                                                        &slice_header);
-            mfc_context->insert_object(ctx, encoder_context,
-                                       (unsigned int *)slice_header, ALIGN(slice_header_length_in_bits, 32) >> 5, slice_header_length_in_bits & 0x1f,
-                                       8,  /* first 8 bytes are start code + nal unit type + svc ext flag +  mvc nal extension */
-                                       0, 0, 1, slice_batch);
-            free(slice_header);
+            intel_avc_slice_insert_packed_data(ctx, encode_state, encoder_context, slice_index, slice_batch);
 
             /* generate common H264 slice header */
             slice_header_length_in_bits = build_avc_slice_header(pSequenceParameter,
@@ -1637,6 +1621,7 @@ gen75_mfc_avc_batchbuffer_slice(VADriverContextP ctx,
        }
 
     } else {
+        intel_avc_slice_insert_packed_data(ctx, encode_state, encoder_context, slice_index, slice_batch);
 
         slice_header_length_in_bits = build_avc_slice_header(pSequenceParameter, pPicParameter, pSliceParameter, &slice_header);
 
