@@ -45,4 +45,9 @@
 # define VA_DRM_AUTH_CUSTOM     VA_DUMMY
 #endif
 
+#if !VA_CHECK_VERSION(0,35,2)
+# define VAProfileH264MultiviewHigh     15
+# define VAProfileH264StereoHigh        16
+#endif
+
 #endif /* VA_BACKEND_COMPAT_H */
