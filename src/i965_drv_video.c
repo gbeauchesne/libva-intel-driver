@@ -61,6 +61,13 @@
 #define HAS_H264_DECODING(ctx)  ((ctx)->codec_info->has_h264_decoding && \
                                  (ctx)->intel.has_bsd)
 
+#define HAS_H264_MVC_DECODING(ctx) \
+    (HAS_H264_DECODING(ctx) && (ctx)->codec_info->h264_mvc_dec_profiles)
+
+#define HAS_H264_MVC_DECODING_PROFILE(ctx, profile)                     \
+    (HAS_H264_MVC_DECODING(ctx) &&                                      \
+     ((ctx)->codec_info->h264_mvc_dec_profiles & (1U << profile)))
+
 #define HAS_H264_ENCODING(ctx)  ((ctx)->codec_info->has_h264_encoding && \
                                  (ctx)->intel.has_bsd)
 
@@ -385,6 +392,10 @@ i965_QueryConfigProfiles(VADriverContextP ctx,
         profile_list[i++] = VAProfileH264Main;
         profile_list[i++] = VAProfileH264High;
     }
+    if (HAS_H264_MVC_DECODING_PROFILE(i965, VAProfileH264MultiviewHigh))
+        profile_list[i++] = VAProfileH264MultiviewHigh;
+    if (HAS_H264_MVC_DECODING_PROFILE(i965, VAProfileH264StereoHigh))
+        profile_list[i++] = VAProfileH264StereoHigh;
 
     if (HAS_VC1_DECODING(i965)) {
         profile_list[i++] = VAProfileVC1Simple;
@@ -441,6 +452,12 @@ i965_QueryConfigEntrypoints(VADriverContextP ctx,
         if (HAS_H264_ENCODING(i965))
             entrypoint_list[n++] = VAEntrypointEncSlice;
 
+        break;
+
+    case VAProfileH264MultiviewHigh:
+    case VAProfileH264StereoHigh:
+        if (HAS_H264_MVC_DECODING_PROFILE(i965, profile))
+            entrypoint_list[n++] = VAEntrypointVLD;
         break;
 
     case VAProfileVC1Simple:
@@ -507,6 +524,16 @@ i965_validate_config(VADriverContextP ctx, VAProfile profile,
         }
         break;
 
+    case VAProfileH264MultiviewHigh:
+    case VAProfileH264StereoHigh:
+        if (HAS_H264_MVC_DECODING_PROFILE(i965, profile) &&
+            entrypoint == VAEntrypointVLD) {
+            va_status = VA_STATUS_SUCCESS;
+        } else {
+            va_status = VA_STATUS_ERROR_UNSUPPORTED_ENTRYPOINT;
+        }
+        break;
+
     case VAProfileVC1Simple:
     case VAProfileVC1Main:
     case VAProfileVC1Advanced:
@@ -561,6 +588,12 @@ i965_get_default_chroma_formats(VADriverContextP ctx, VAProfile profile,
     case VAProfileH264Main:
     case VAProfileH264High:
         if (HAS_H264_DECODING(i965) && entrypoint == VAEntrypointVLD)
+            chroma_formats |= i965->codec_info->h264_dec_chroma_formats;
+        break;
+
+    case VAProfileH264MultiviewHigh:
+    case VAProfileH264StereoHigh:
+        if (HAS_H264_MVC_DECODING(i965) && entrypoint == VAEntrypointVLD)
             chroma_formats |= i965->codec_info->h264_dec_chroma_formats;
         break;
 
@@ -1664,6 +1697,12 @@ i965_CreateContext(VADriverContextP ctx,
             return VA_STATUS_ERROR_UNSUPPORTED_PROFILE;
         render_state->interleaved_uv = 1;
         break;
+    case VAProfileH264MultiviewHigh:
+    case VAProfileH264StereoHigh:
+        if (!HAS_H264_MVC_DECODING_PROFILE(i965, obj_config->profile))
+            return VA_STATUS_ERROR_UNSUPPORTED_PROFILE;
+        render_state->interleaved_uv = 1;
+        break;
     default:
         render_state->interleaved_uv = !!(IS_GEN6(i965->intel.device_info) || IS_GEN7(i965->intel.device_info) || IS_GEN8(i965->intel.device_info));
         break;
@@ -2074,6 +2113,15 @@ i965_BeginPicture(VADriverContextP ctx,
     case VAProfileH264Main:
     case VAProfileH264High:
         vaStatus = VA_STATUS_SUCCESS;
+        break;
+
+    case VAProfileH264MultiviewHigh:
+    case VAProfileH264StereoHigh:
+        if (HAS_H264_MVC_DECODING_PROFILE(i965, obj_config->profile)) {
+            vaStatus = VA_STATUS_SUCCESS;
+        } else {
+            ASSERT_RET(0, VA_STATUS_ERROR_UNSUPPORTED_PROFILE);
+        }
         break;
 
     case VAProfileVC1Simple:

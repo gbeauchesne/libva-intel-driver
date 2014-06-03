@@ -302,6 +302,7 @@ struct hw_codec_info
     int min_linear_wpitch;
     int min_linear_hpitch;
 
+    unsigned int h264_mvc_dec_profiles;
     unsigned int h264_dec_chroma_formats;
     unsigned int jpeg_dec_chroma_formats;
 
