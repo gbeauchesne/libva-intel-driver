@@ -182,6 +182,7 @@ AC_OUTPUT([
     src/shaders/render/Makefile
     src/shaders/utils/Makefile
     src/shaders/vme/Makefile
+    src/shaders/vme_old/Makefile
     src/wayland/Makefile
 ])
 
