@@ -63,6 +63,8 @@ enum VIDEO_CODING_TYPE{
 enum AVC_VME_KERNEL_TYPE{ 
     AVC_VME_INTRA_SHADER = 0,
     AVC_VME_INTER_SHADER,
+    AVC_VME_OLD_INTRA_SHADER,
+    AVC_VME_OLD_INTER_SHADER,
     AVC_VME_BATCHBUFFER,
     AVC_VME_BINTER_SHADER,
     AVC_VME_KERNEL_SUM
@@ -81,6 +83,14 @@ static const uint32_t gen7_vme_intra_frame[][4] = {
 
 static const uint32_t gen7_vme_inter_frame[][4] = {
 #include "shaders/vme/inter_frame_ivb.g7b"
+};
+
+static const uint32_t gen7_vme_old_intra_frame[][4] = {
+#include "shaders/vme_old/intra_frame.g7b"
+};
+
+static const uint32_t gen7_vme_old_inter_frame[][4] = {
+#include "shaders/vme_old/inter_frame.g7b"
 };
 
 static const uint32_t gen7_vme_batchbuffer[][4] = {
@@ -104,6 +114,20 @@ static struct i965_kernel gen7_vme_kernels[] = {
         AVC_VME_INTER_SHADER,
         gen7_vme_inter_frame,
         sizeof(gen7_vme_inter_frame),
+        NULL
+    },
+    {
+        "AVC VME Old Intra Frame",
+        AVC_VME_OLD_INTRA_SHADER,
+        gen7_vme_old_intra_frame, 			
+        sizeof(gen7_vme_old_intra_frame),		
+        NULL
+    },
+    {
+        "AVC VME Old Inter Frame",
+        AVC_VME_OLD_INTER_SHADER,
+        gen7_vme_old_inter_frame,
+        sizeof(gen7_vme_old_inter_frame),
         NULL
     },
     {
@@ -359,6 +383,36 @@ static VAStatus gen7_vme_constant_setup(VADriverContextP ctx,
     return VA_STATUS_SUCCESS;
 }
 
+static VAStatus
+gen7_vme_vme_state_setup(VADriverContextP ctx,
+        struct encode_state *encode_state,
+        int is_intra,
+        struct intel_encoder_context *encoder_context)
+{
+    struct gen6_vme_context *vme_context = encoder_context->vme_context;
+    unsigned int *vme_state_message;
+    int i;
+
+    //building VME state message
+    dri_bo_map(vme_context->vme_state.bo, 1);
+    assert(vme_context->vme_state.bo->virtual);
+    vme_state_message = (unsigned int *)vme_context->vme_state.bo->virtual;
+
+    vme_state_message[0] = 0x10010101;
+    vme_state_message[1] = 0x100F0F0F;
+    vme_state_message[2] = 0x10010101;
+    vme_state_message[3] = 0x000F0F0F;
+    for(i = 4; i < 14; i++) {
+        vme_state_message[i] = 0x00000000;
+    }	
+
+    for(i = 14; i < 32; i++) {
+        vme_state_message[i] = 0x00000000;
+    }
+
+    dri_bo_unmap( vme_context->vme_state.bo);
+    return VA_STATUS_SUCCESS;
+}
 
 static VAStatus gen7_vme_avc_state_setup(VADriverContextP ctx,
                                          struct encode_state *encode_state,
@@ -598,25 +652,30 @@ static void gen7_vme_pipeline_programing(VADriverContextP ctx,
     int s;
     bool allow_hwscore = true;
     int kernel_shader;
+    unsigned int is_low_quality = (encoder_context->quality_level == ENCODER_LOW_QUALITY);
 
-    for (s = 0; s < encode_state->num_slice_params_ext; s++) {
-        pSliceParameter = (VAEncSliceParameterBufferH264 *)encode_state->slice_params_ext[s]->buffer; 
-        if ((pSliceParameter->macroblock_address % width_in_mbs)) {
-            allow_hwscore = false;
-            break;
-	}
+    if (is_low_quality)
+        allow_hwscore = false;
+    else {
+        for (s = 0; s < encode_state->num_slice_params_ext; s++) {
+            pSliceParameter = (VAEncSliceParameterBufferH264 *)encode_state->slice_params_ext[s]->buffer; 
+            if ((pSliceParameter->macroblock_address % width_in_mbs)) {
+                allow_hwscore = false;
+                break;
+            }
+        }
     }
 
     if ((pSliceParameter->slice_type == SLICE_TYPE_I) ||
 	(pSliceParameter->slice_type == SLICE_TYPE_I)) {
-	kernel_shader = AVC_VME_INTRA_SHADER;
+	kernel_shader = (is_low_quality ? AVC_VME_OLD_INTRA_SHADER : AVC_VME_INTRA_SHADER);
     } else if ((pSliceParameter->slice_type == SLICE_TYPE_P) ||
                (pSliceParameter->slice_type == SLICE_TYPE_SP)) {
-	kernel_shader = AVC_VME_INTER_SHADER;
+	kernel_shader = (is_low_quality ? AVC_VME_OLD_INTER_SHADER : AVC_VME_INTER_SHADER);
     } else {
 	kernel_shader = AVC_VME_BINTER_SHADER;
 	if (!allow_hwscore)
-            kernel_shader = AVC_VME_INTER_SHADER;
+            kernel_shader = (is_low_quality ? AVC_VME_OLD_INTER_SHADER : AVC_VME_INTER_SHADER);
     }
 
     if (allow_hwscore)
@@ -668,7 +727,10 @@ static VAStatus gen7_vme_prepare(VADriverContextP ctx,
     gen7_vme_surface_setup(ctx, encode_state, is_intra, encoder_context);
     gen7_vme_interface_setup(ctx, encode_state, encoder_context);
     gen7_vme_constant_setup(ctx, encode_state, encoder_context);
-    gen7_vme_avc_state_setup(ctx, encode_state, is_intra, encoder_context);
+    if (encoder_context->quality_level == ENCODER_LOW_QUALITY)
+        gen7_vme_vme_state_setup(ctx, encode_state, is_intra, encoder_context);
+    else
+        gen7_vme_avc_state_setup(ctx, encode_state, is_intra, encoder_context);
 
     /*Programing media pipeline*/
     gen7_vme_pipeline_programing(ctx, encode_state, encoder_context);
