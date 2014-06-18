@@ -526,6 +526,8 @@ intel_update_codec_frame_store_index(
             continue;
 
         GenCodecSurface * const codec_surface = obj_surface->private_data;
+        if (!codec_surface)
+            continue;
         if (codec_surface->frame_store_id >= 0) {
             GenFrameStore * const fs =
                 &frame_store[codec_surface->frame_store_id];
@@ -559,6 +561,8 @@ intel_update_codec_frame_store_index(
             continue;
 
         GenCodecSurface * const codec_surface = obj_surface->private_data;
+        if (!codec_surface)
+            continue;
         if (n < num_free_refs) {
             GenFrameStore * const fs = free_refs[n++];
             fs->surface_id = obj_surface->base.id;
