@@ -77,8 +77,9 @@ AC_SUBST(LIBDRM_VERSION)
 
 dnl Check for gen4asm
 PKG_CHECK_MODULES(GEN4ASM, [intel-gen4asm >= 1.5], [gen4asm=yes], [gen4asm=no])
-AM_CONDITIONAL(HAVE_GEN4ASM, test x$gen4asm = xyes)
 AC_PATH_PROG([GEN4ASM], [intel-gen4asm])
+AS_IF([test "x$GEN4ASM" = "x" ], [AM_CONDITIONAL(HAVE_GEN4ASM, false)],
+    [AM_CONDITIONAL(HAVE_GEN4ASM, [test x$gen4asm = xyes])])
 
 dnl Check for VA-API
 PKG_CHECK_MODULES(LIBVA_DEPS,     [libva >= va_api_version])
