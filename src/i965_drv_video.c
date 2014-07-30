@@ -684,6 +684,11 @@ i965_GetConfigAttributes(VADriverContextP ctx,
 		break;
 	    }
 
+        case VAConfigAttribDecSliceMode:
+            if (entrypoint == VAEntrypointVLD)
+                attrib_list[i].value = VA_DEC_SLICE_MODE_NORMAL;
+            break;
+
         default:
             /* Do nothing */
             attrib_list[i].value = VA_ATTRIB_NOT_SUPPORTED;
@@ -791,6 +796,17 @@ i965_CreateConfig(VADriverContextP ctx,
             vaStatus = i965_append_config_attribute(obj_config, &attrib);
         else if (!(attrib_found->value & attrib.value))
             vaStatus = VA_STATUS_ERROR_UNSUPPORTED_RT_FORMAT;
+
+        if (entrypoint == VAEntrypointVLD) {
+            attrib.type = VAConfigAttribDecSliceMode;
+            attrib.value = VA_DEC_SLICE_MODE_NORMAL;
+            attrib_found = i965_lookup_config_attribute(obj_config, attrib.type);
+            if (!attrib_found || !attrib_found->value)
+                vaStatus = i965_append_config_attribute(obj_config, &attrib);
+            else if (attrib_found->value != attrib.value)
+                vaStatus = VA_STATUS_ERROR_UNKNOWN;
+        }
+
     }
 
     /* Error recovery */
