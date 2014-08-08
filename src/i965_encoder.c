@@ -428,8 +428,7 @@ gen7_enc_hw_context_init(VADriverContextP ctx, struct object_config *obj_config)
 
     encoder_context = (struct intel_encoder_context *)intel_enc_hw_context_init(ctx, obj_config, gen7_vme_context_init, gen7_mfc_context_init);
 
-    if (obj_config->profile == VAProfileH264ConstrainedBaseline)
-        encoder_context->quality_range = ENCODER_QUALITY_RANGE;
+    encoder_context->quality_range = ENCODER_QUALITY_RANGE;
 
     return (struct hw_context *)encoder_context;
 }
