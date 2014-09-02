@@ -20,7 +20,10 @@
 # TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 # SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-SUBDIRS = shaders
+SUBDIRS		= shaders
+DIST_SUBDIRS	= $(SUBDIRS)
+EXTRA_DIST	=
+BUILT_SOURCES	=
 
 AM_CPPFLAGS = \
 	-DPTHREADS		\
@@ -102,6 +105,7 @@ source_h = \
 	i965_decoder.h		\
 	i965_decoder_utils.h	\
 	i965_defines.h          \
+	i965_drv_version.h	\
 	i965_drv_video.h        \
 	i965_encoder.h		\
 	i965_encoder_utils.h	\
@@ -145,12 +149,43 @@ source_h			+= i965_output_wayland.h
 driver_cflags			+= $(WAYLAND_CFLAGS)
 endif
 
+# git version
+VERSION_FILE			= .VERSION
+OLD_VERSION_FILE		= $(VERSION_FILE).old
+NEW_VERSION_FILE		= $(VERSION_FILE).new
+PKG_VERSION_FILE		= $(VERSION_FILE).pkg
+
+i965_drv_version.h: gen-version
+	$(AM_V_GEN)							    \
+	OV=`[ -f $(OLD_VERSION_FILE) ] && cat $(OLD_VERSION_FILE) || :`;    \
+	NV=`cat $(NEW_VERSION_FILE)`;					    \
+	if [ "$$OV" != "$$NV" -o ! -f i965_drv_version.h ]; then	    \
+		cp -f $(NEW_VERSION_FILE) $(OLD_VERSION_FILE);		    \
+		$(SED) -e "s|\@I965_DRV_VERSION_ID\@|$${NV}|"		    \
+			$(srcdir)/i965_drv_version.h.in > i965_drv_version.h; \
+	fi
+
+gen-version:
+	@echo $(VERSION) > $(NEW_VERSION_FILE)
+if HAVE_GIT
+	@[ -d $(top_srcdir)/.git ] && \
+	(cd $(top_srcdir) && $(GIT) describe --tags) > $(NEW_VERSION_FILE) || :
+endif
+	@[ -f $(srcdir)/$(PKG_VERSION_FILE) ] && \
+	cp -f $(srcdir)/$(PKG_VERSION_FILE) $(NEW_VERSION_FILE) || :
+
+$(PKG_VERSION_FILE): $(NEW_VERSION_FILE)
+	@cp -f $< $@
+
+BUILT_SOURCES	+= i965_drv_version.h
+EXTRA_DIST	+= i965_drv_version.h.in $(PKG_VERSION_FILE)
+
 # Wayland protocol
 protocol_source_h = wayland-drm-client-protocol.h
 i965_output_wayland.c: $(protocol_source_h)
 @wayland_scanner_rules@
 
-DIST_SUBDIRS = $(SUBDIRS) wayland
+DIST_SUBDIRS	+= wayland
 
 # Extra clean files so that maintainer-clean removes *everything*
 MAINTAINERCLEANFILES = Makefile.in config.h.in

@@ -42,6 +42,7 @@
 #include "intel_batchbuffer.h"
 #include "i965_defines.h"
 #include "i965_drv_video.h"
+#include "i965_drv_version.h"
 #include "i965_decoder.h"
 #include "i965_encoder.h"
 
@@ -5543,6 +5544,12 @@ ensure_vendor_string(struct i965_driver_data *i965, const char *chipset)
             goto error;
         len += ret;
     }
+
+    ret = snprintf(&i965->va_vendor[len], sizeof(i965->va_vendor) - len,
+        " (%s)", I965_DRV_VERSION_ID);
+    if (ret < 0 || ret >= sizeof(i965->va_vendor))
+        goto error;
+    len += ret;
     return true;
 
 error:
