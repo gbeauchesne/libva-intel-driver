@@ -505,6 +505,15 @@ struct i965_post_processing_context
     struct pp_blending_context pp_blending_context;
     void *private_context; /* pointer to the current private context */
     void *pipeline_param;  /* pointer to the pipeline parameter */
+    /**
+     * \ref Extra filter flags used as a fast path.
+     *
+     * This corresponds to vaPutSurface() flags, for direct rendering,
+     * or to VAProcPipelineParameterBuffer.filter_flags when the VPP
+     * interfaces are used. In the latter case, this is just a copy of
+     * that field.
+     */
+    unsigned int filter_flags;
 
     int (*pp_x_steps)(void *private_context);
     int (*pp_y_steps)(void *private_context);
