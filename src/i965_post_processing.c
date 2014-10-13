@@ -4799,7 +4799,7 @@ i965_scaling_processing(
     const VARectangle *src_rect,
     struct object_surface *dst_surface_obj,
     const VARectangle *dst_rect,
-    unsigned int       flags)
+    unsigned int       va_flags)
 {
     VAStatus va_status = VA_STATUS_SUCCESS;
     struct i965_driver_data *i965 = i965_driver_data(ctx);
@@ -4807,7 +4807,7 @@ i965_scaling_processing(
     assert(src_surface_obj->fourcc == VA_FOURCC_NV12);
     assert(dst_surface_obj->fourcc == VA_FOURCC_NV12);
 
-    if (HAS_VPP(i965) && (flags & I965_PP_FLAG_AVS)) {
+    if (HAS_VPP(i965)) {
         struct i965_surface src_surface;
         struct i965_surface dst_surface;
 
@@ -4821,12 +4821,8 @@ i965_scaling_processing(
          dst_surface.flags = I965_SURFACE_FLAG_FRAME;
 
          va_status = i965_post_processing_internal(ctx, i965->pp_context,
-                                                   &src_surface,
-                                                   src_rect,
-                                                   &dst_surface,
-                                                   dst_rect,
-                                                   PP_NV12_AVS,
-                                                   NULL);
+             &src_surface, src_rect, &dst_surface, dst_rect,
+             avs_is_needed(va_flags) ? PP_NV12_AVS : PP_NV12_SCALING, NULL);
 
          _i965UnlockMutex(&i965->pp_mutex);
     }
@@ -4840,7 +4836,7 @@ i965_post_processing(
     struct object_surface *obj_surface,
     const VARectangle *src_rect,
     const VARectangle *dst_rect,
-    unsigned int       flags,
+    unsigned int       va_flags,
     int               *has_done_scaling  
 )
 {
@@ -4861,38 +4857,7 @@ i965_post_processing(
 
         _i965LockMutex(&i965->pp_mutex);
 
-        if (flags & I965_PP_FLAG_MCDI) {
-            src_surface.base = (struct object_base *)obj_surface;
-            src_surface.type = I965_SURFACE_TYPE_SURFACE;
-            src_surface.flags = (flags & I965_PP_FLAG_TOP_FIELD) ? 
-                I965_SURFACE_FLAG_TOP_FIELD_FIRST : I965_SURFACE_FLAG_BOTTOME_FIELD_FIRST;
-
-            status = i965_CreateSurfaces(ctx,
-                                         obj_surface->orig_width,
-                                         obj_surface->orig_height,
-                                         VA_RT_FORMAT_YUV420,
-                                         1,
-                                         &out_surface_id);
-            assert(status == VA_STATUS_SUCCESS);
-            obj_surface = SURFACE(out_surface_id);
-            assert(obj_surface);
-            i965_check_alloc_surface_bo(ctx, obj_surface, 0, VA_FOURCC_NV12, SUBSAMPLE_YUV420);
-            i965_vpp_clear_surface(ctx, i965->pp_context, obj_surface, 0); 
-
-            dst_surface.base = (struct object_base *)obj_surface;
-            dst_surface.type = I965_SURFACE_TYPE_SURFACE;
-            dst_surface.flags = I965_SURFACE_FLAG_FRAME;
-
-            i965_post_processing_internal(ctx, i965->pp_context,
-                                          &src_surface,
-                                          src_rect,
-                                          &dst_surface,
-                                          dst_rect,
-                                          PP_NV12_DNDI,
-                                          NULL);
-        }
-
-        if (flags & I965_PP_FLAG_AVS) {
+        if (avs_is_needed(va_flags)) {
             struct i965_render_state *render_state = &i965->render_state;
             struct intel_region *dest_region = render_state->draw_region;
 
@@ -5693,8 +5658,7 @@ i965_proc_picture(VADriverContextP ctx,
                                       &src_rect,
                                       &dst_surface,
                                       &dst_rect,
-                                      (pipeline_param->filter_flags & VA_FILTER_SCALING_MASK) == VA_FILTER_SCALING_NL_ANAMORPHIC ?
-                                      PP_NV12_AVS : PP_NV12_SCALING,
+                                      avs_is_needed(pipeline_param->filter_flags) ? PP_NV12_AVS : PP_NV12_SCALING,
                                       NULL);
     }
 
