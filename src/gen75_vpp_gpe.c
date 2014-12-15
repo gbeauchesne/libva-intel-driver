@@ -336,14 +336,12 @@ gen75_gpe_process_init(VADriverContextP ctx,
                       "vpp batch buffer",
                        batch_buf_size, 0x1000);
     vpp_gpe_ctx->vpp_batchbuffer.bo = bo;
-    dri_bo_reference(vpp_gpe_ctx->vpp_batchbuffer.bo);
 
     dri_bo_unreference(vpp_gpe_ctx->vpp_kernel_return.bo);
     bo = dri_bo_alloc(i965->intel.bufmgr,
                       "vpp kernel return buffer",
                        kernel_return_size, 0x1000);
     vpp_gpe_ctx->vpp_kernel_return.bo = bo;
-    dri_bo_reference(vpp_gpe_ctx->vpp_kernel_return.bo); 
 
     vpp_gpe_ctx->gpe_context_init(ctx, &vpp_gpe_ctx->gpe_ctx);
 
@@ -580,14 +578,12 @@ gen8_gpe_process_init(VADriverContextP ctx,
                       "vpp batch buffer",
                        batch_buf_size, 0x1000);
     vpp_gpe_ctx->vpp_batchbuffer.bo = bo;
-    dri_bo_reference(vpp_gpe_ctx->vpp_batchbuffer.bo);
 
     dri_bo_unreference(vpp_gpe_ctx->vpp_kernel_return.bo);
     bo = dri_bo_alloc(i965->intel.bufmgr,
                       "vpp kernel return buffer",
                        kernel_return_size, 0x1000);
     vpp_gpe_ctx->vpp_kernel_return.bo = bo;
-    dri_bo_reference(vpp_gpe_ctx->vpp_kernel_return.bo);
 
     vpp_gpe_ctx->gpe_context_init(ctx, &vpp_gpe_ctx->gpe_ctx);
 
