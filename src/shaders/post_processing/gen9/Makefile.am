@@ -15,6 +15,11 @@ INTEL_PP_G9B = \
 	pa_to_pa.g9b		\
 	$(NULL)
 
+INTEL_PP_PRE_G8B =		\
+	sharpening_h_blur.g9b	\
+	sharpening_unmask.g9b	\
+	sharpening_v_blur.g9b
+
 INTEL_PP_G8A = \
 	EOT.g8a				\
 	PL2_AVS_Buf_0.g8a		\
@@ -67,7 +72,8 @@ $(INTEL_PP_GEN9_ASM): $(INTEL_PP_ASM) $(INTEL_PP_G9A)
 CLEANFILES = $(INTEL_PP_GEN9_ASM)
 
 EXTRA_DIST = \
-	$(INTEL_PP_G9B) \
+	$(INTEL_PP_G9B) 	\
+	$(INTEL_PP_PRE_G8B) 	\
 	$(NULL)
 
 # Extra clean files so that maintainer-clean removes *everything*

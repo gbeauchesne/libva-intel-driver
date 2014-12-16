@@ -120,6 +120,41 @@ static struct i965_kernel gen8_vpp_sharpening_kernels[] = {
     },
 };
 
+/* sharpening kernels for Skylake */
+static const unsigned int gen9_gpe_sharpening_h_blur[][4] = {
+#include "shaders/post_processing/gen9/sharpening_h_blur.g9b"
+};
+static const unsigned int gen9_gpe_sharpening_v_blur[][4] = {
+#include "shaders/post_processing/gen9/sharpening_v_blur.g9b"
+};
+static const unsigned int gen9_gpe_sharpening_unmask[][4] = {
+#include "shaders/post_processing/gen9/sharpening_unmask.g9b"
+};
+
+static struct i965_kernel gen9_vpp_sharpening_kernels[] = {
+    {
+        "vpp: sharpening(horizontal blur)",
+        VPP_GPE_SHARPENING,
+        gen9_gpe_sharpening_h_blur,
+        sizeof(gen9_gpe_sharpening_h_blur),
+        NULL
+    },
+    {
+        "vpp: sharpening(vertical blur)",
+        VPP_GPE_SHARPENING,
+        gen9_gpe_sharpening_v_blur,
+        sizeof(gen9_gpe_sharpening_v_blur),
+        NULL
+    },
+    {
+        "vpp: sharpening(unmask)",
+        VPP_GPE_SHARPENING,
+        gen9_gpe_sharpening_unmask,
+        sizeof(gen9_gpe_sharpening_unmask),
+        NULL
+    },
+};
+
 static VAStatus
 gen75_gpe_process_surfaces_setup(VADriverContextP ctx,
                    struct vpp_gpe_context *vpp_gpe_ctx)
@@ -652,9 +687,10 @@ vpp_gpe_process_sharpening(VADriverContextP ctx,
          struct i965_kernel * vpp_kernels;
          if (IS_HASWELL(i965->intel.device_info))
              vpp_kernels = gen75_vpp_sharpening_kernels;
-         else if (IS_GEN8(i965->intel.device_info) ||
-                  IS_GEN9(i965->intel.device_info)) // TODO: build the sharpening kernel for GEN9
+         else if (IS_GEN8(i965->intel.device_info))
              vpp_kernels = gen8_vpp_sharpening_kernels;
+         else if (IS_GEN9(i965->intel.device_info))
+             vpp_kernels = gen9_vpp_sharpening_kernels;
 
          vpp_gpe_ctx->gpe_load_kernels(ctx,
                                &vpp_gpe_ctx->gpe_ctx,

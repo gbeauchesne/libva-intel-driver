@@ -352,7 +352,7 @@ static struct hw_codec_info skl_hw_codec_info = {
     .filters = {
         { VAProcFilterNoiseReduction, I965_RING_VEBOX },
         { VAProcFilterDeinterlacing, I965_RING_VEBOX },
-        { VAProcFilterSharpening, I965_RING_NULL }, /* need to rebuild the shader for BDW */
+        { VAProcFilterSharpening, I965_RING_NULL },
         { VAProcFilterColorBalance, I965_RING_VEBOX},
         { VAProcFilterSkinToneEnhancement, I965_RING_VEBOX},
     },
