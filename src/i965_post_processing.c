@@ -4777,6 +4777,22 @@ i965_vpp_clear_surface(VADriverContextP ctx,
     intel_batchbuffer_end_atomic(batch);
 }
 
+static void
+i965_vpp_clear_surface_with_mask(VADriverContextP ctx,
+    struct i965_post_processing_context *pp_context,
+    struct object_surface *obj_surface, const VARectangle *mask,
+    unsigned int color)
+{
+    /* Don't clear anything if the masked out portion entirely boils
+       down to the actual surface */
+    if (mask && (mask->x == 0 && mask->y == 0 &&
+            mask->width == obj_surface->orig_width &&
+            mask->height == obj_surface->orig_height))
+        return;
+
+    i965_vpp_clear_surface(ctx, pp_context, obj_surface, color);
+}
+
 VAStatus
 i965_scaling_processing(
     VADriverContextP   ctx,
@@ -4880,7 +4896,8 @@ i965_post_processing(
             obj_surface = SURFACE(out_surface_id);
             assert(obj_surface);
             i965_check_alloc_surface_bo(ctx, obj_surface, 0, VA_FOURCC_NV12, SUBSAMPLE_YUV420);
-            i965_vpp_clear_surface(ctx, pp_context, obj_surface, 0);
+            i965_vpp_clear_surface_with_mask(ctx, pp_context, obj_surface,
+                dst_rect, 0);
 
             dst_surface.base = (struct object_base *)obj_surface;
             dst_surface.type = I965_SURFACE_TYPE_SURFACE;
@@ -5882,7 +5899,8 @@ i965_proc_picture(VADriverContextP ctx,
     }
 
     dst_surface.type = I965_SURFACE_TYPE_SURFACE;
-    i965_vpp_clear_surface(ctx, &proc_context->pp_context, obj_surface, pipeline_param->output_background_color); 
+    i965_vpp_clear_surface_with_mask(ctx, &proc_context->pp_context,
+        obj_surface, &dst_rect, pipeline_param->output_background_color);
 
     // load/save doesn't support different origin offset for src and dst surface
     if (src_rect.width == dst_rect.width &&

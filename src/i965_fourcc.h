@@ -65,4 +65,12 @@ typedef struct {
 
 extern const i965_fourcc_info *get_fourcc_info(unsigned int);
 
+static inline bool
+is_fourcc_with_alpha(uint32_t fourcc)
+{
+    return ((fourcc & 0xff) == 'A' /* Axxx */ ||
+            ((fourcc >> 24) & 0xff) == 'A' /* xxxA */ ||
+            fourcc == VA_FOURCC_IA44 || fourcc == VA_FOURCC_IA88);
+}
+
 #endif /* _I965_FOURCC_H_ */
