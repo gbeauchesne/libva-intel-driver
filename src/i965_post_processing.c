@@ -5465,8 +5465,7 @@ static const int proc_frame_to_pp_frame[3] = {
 enum {
     PP_OP_CHANGE_FORMAT = 1 << 0,
     PP_OP_CHANGE_SIZE   = 1 << 1,
-    PP_OP_DEINTERLACE   = 1 << 2,
-    PP_OP_COMPLEX       = 1 << 3,
+    PP_OP_COMPLEX       = 1 << 2,
 };
 
 static int
@@ -5570,10 +5569,9 @@ i965_proc_picture_fast(VADriverContextP ctx,
         (VAProcPipelineParameterBuffer *)proc_state->pipeline_param->buffer;
     struct object_surface *src_obj_surface, *dst_obj_surface;
     struct i965_surface src_surface, dst_surface;
-    const VAProcFilterParameterBufferDeinterlacing *deint_params = NULL;
     VARectangle src_rect, dst_rect;
     VAStatus status;
-    uint32_t i, filter_flags = 0, pp_ops = 0;
+    uint32_t i, filter_flags, pp_ops = 0;
     int pp_index;
 
     /* Validate pipeline parameters */
@@ -5592,16 +5590,12 @@ i965_proc_picture_fast(VADriverContextP ctx,
         filter = (VAProcFilterParameterBuffer *)
             obj_buffer->buffer_store->buffer;
         switch (filter->type) {
-        case VAProcFilterDeinterlacing:
-            pp_ops |= PP_OP_DEINTERLACE;
-            deint_params = (VAProcFilterParameterBufferDeinterlacing *)filter;
-            break;
         default:
             pp_ops |= PP_OP_COMPLEX;
             break;
         }
     }
-    filter_flags |= pipeline_param->filter_flags & VA_FILTER_SCALING_MASK;
+    filter_flags = pipeline_param->filter_flags;
 
     /* Validate source surface */
     src_obj_surface = SURFACE(pipeline_param->surface);
@@ -5626,20 +5620,6 @@ i965_proc_picture_fast(VADriverContextP ctx,
     src_surface.base  = &src_obj_surface->base;
     src_surface.type  = I965_SURFACE_TYPE_SURFACE;
     src_surface.flags = I965_SURFACE_FLAG_FRAME;
-
-    if (pp_ops & PP_OP_DEINTERLACE) {
-        filter_flags |= !(deint_params->flags & VA_DEINTERLACING_BOTTOM_FIELD) ?
-            VA_TOP_FIELD : VA_BOTTOM_FIELD;
-        if (deint_params->algorithm != VAProcDeinterlacingBob)
-            pp_ops |= PP_OP_COMPLEX;
-    }
-    else if (pipeline_param->filter_flags & (VA_TOP_FIELD | VA_BOTTOM_FIELD)) {
-        filter_flags |= (pipeline_param->filter_flags & VA_TOP_FIELD) ?
-            VA_TOP_FIELD : VA_BOTTOM_FIELD;
-        pp_ops |= PP_OP_DEINTERLACE;
-    }
-    if (pp_ops & PP_OP_DEINTERLACE) // XXX: no bob-deinterlacing optimization yet
-        pp_ops |= PP_OP_COMPLEX;
 
     /* Validate target surface */
     dst_obj_surface = SURFACE(proc_state->current_render_target);
@@ -5675,20 +5655,27 @@ i965_proc_picture_fast(VADriverContextP ctx,
             return VA_STATUS_ERROR_UNIMPLEMENTED; // temporary surface is needed
     }
     if (pipeline_param->pipeline_flags & VA_PROC_PIPELINE_FAST) {
-        filter_flags &= ~VA_FILTER_SCALING_MASK;
+        filter_flags &= ~(VA_FILTER_SCALING_MASK | VA_SRC_COLOR_MASK);
         filter_flags |= VA_FILTER_SCALING_FAST;
     }
-    else {
-        if (pp_ops & PP_OP_COMPLEX)
-            return VA_STATUS_ERROR_UNIMPLEMENTED; // full pipeline is needed
-        if ((filter_flags & VA_FILTER_SCALING_MASK) > VA_FILTER_SCALING_HQ)
-            return VA_STATUS_ERROR_UNIMPLEMENTED;
-    }
+    if (filter_flags & (VA_TOP_FIELD | VA_BOTTOM_FIELD))
+        pp_ops |= PP_OP_COMPLEX; // field picture not supported yet
+    if ((filter_flags & VA_FILTER_SCALING_MASK) > VA_FILTER_SCALING_HQ)
+        pp_ops |= PP_OP_COMPLEX; // advanced scaling not supported
+    if (pp_ops & PP_OP_COMPLEX)
+        return VA_STATUS_ERROR_UNIMPLEMENTED; // full pipeline is needed
 
     pp_index = pp_get_kernel_index(src_obj_surface->fourcc,
         dst_obj_surface->fourcc, pp_ops, filter_flags);
     if (pp_index < 0)
         return VA_STATUS_ERROR_UNIMPLEMENTED;
+
+    status = i965_check_alloc_surface_bo_default(ctx, dst_obj_surface);
+    if (status != VA_STATUS_SUCCESS)
+        return status;
+
+    i965_vpp_clear_surface_with_mask(ctx, &proc_context->pp_context,
+        dst_obj_surface, &dst_rect, pipeline_param->output_background_color);
 
     proc_context->pp_context.filter_flags = filter_flags;
     status = i965_post_processing_internal(ctx, &proc_context->pp_context,
