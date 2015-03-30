@@ -3603,6 +3603,28 @@ i965_check_alloc_surface_bo(VADriverContextP ctx,
     return VA_STATUS_SUCCESS;
 }
 
+VAStatus
+i965_check_alloc_surface_bo_default(VADriverContextP ctx,
+    struct object_surface *obj_surface)
+{
+    struct i965_driver_data * const i965 = i965_driver_data(ctx);
+    unsigned int fourcc, subsampling;
+
+    if (obj_surface->bo)
+        return VA_STATUS_SUCCESS;
+
+    fourcc = obj_surface->fourcc;
+    if (!fourcc)
+        fourcc = VA_FOURCC_NV12;
+
+    subsampling = obj_surface->subsampling;
+    if (!subsampling)
+        subsampling = get_sampling_from_fourcc(fourcc);
+
+    return i965_check_alloc_surface_bo(ctx, obj_surface,
+        HAS_TILED_SURFACE(i965), fourcc, subsampling);
+}
+
 VAStatus i965_DeriveImage(VADriverContextP ctx,
                           VASurfaceID surface,
                           VAImage *out_image)        /* out */

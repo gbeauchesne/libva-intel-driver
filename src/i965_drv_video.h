@@ -450,6 +450,10 @@ i965_check_alloc_surface_bo(VADriverContextP ctx,
                             unsigned int fourcc,
                             unsigned int subsampling);
 
+VAStatus
+i965_check_alloc_surface_bo_default(VADriverContextP ctx,
+    struct object_surface *obj_surface);
+
 int
 va_enc_packed_type_to_idx(int packed_type);
 
