@@ -1240,6 +1240,8 @@ i965_CreateSurfaces2(
                 memory_type = I965_SURFACE_MEM_DRM_PRIME; /* drm prime fd */
             else if (attrib_list[i].value.value.i == VA_SURFACE_ATTRIB_MEM_TYPE_VA)
                 memory_type = I965_SURFACE_MEM_NATIVE; /* va native memory, to be allocated */
+            else
+                memory_type = 0;
         }
 
         if ((attrib_list[i].type == VASurfaceAttribExternalBufferDescriptor) &&
@@ -1248,6 +1250,9 @@ i965_CreateSurfaces2(
             memory_attibute = (VASurfaceAttribExternalBuffers *)attrib_list[i].value.value.p;
         }
     }
+
+    if (!memory_type)
+        return VA_STATUS_ERROR_UNSUPPORTED_MEMORY_TYPE;
 
     /* support 420 & 422 & RGB32 format, 422 and RGB32 are only used
      * for post-processing (including color conversion) */

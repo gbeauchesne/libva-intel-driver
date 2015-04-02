@@ -505,9 +505,11 @@ extern VAStatus i965_CreateSurfaces(VADriverContextP ctx,
                     int num_surfaces,
                     VASurfaceID *surfaces);
 
-#define I965_SURFACE_MEM_NATIVE             0
-#define I965_SURFACE_MEM_GEM_FLINK          1
-#define I965_SURFACE_MEM_DRM_PRIME          2
+enum {
+    I965_SURFACE_MEM_NATIVE = 1,
+    I965_SURFACE_MEM_GEM_FLINK,
+    I965_SURFACE_MEM_DRM_PRIME,
+};
 
 void
 i965_destroy_surface_storage(struct object_surface *obj_surface);
