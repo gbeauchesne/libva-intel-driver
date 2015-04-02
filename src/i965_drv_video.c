@@ -1004,7 +1004,7 @@ i965_suface_external_memory(VADriverContextP ctx,
 
     if (!memory_attibute ||
         !memory_attibute->buffers ||
-        index > memory_attibute->num_buffers)
+        index >= memory_attibute->num_buffers)
         return VA_STATUS_ERROR_INVALID_PARAMETER;
 
     ASSERT_RET(obj_surface->orig_width == memory_attibute->width, VA_STATUS_ERROR_INVALID_PARAMETER);
