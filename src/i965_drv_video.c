@@ -992,24 +992,18 @@ i965_surface_native_memory(VADriverContextP ctx,
 
     return VA_STATUS_SUCCESS;
 }
-    
+
 static VAStatus
-i965_suface_external_memory(VADriverContextP ctx,
-                            struct object_surface *obj_surface,
-                            int external_memory_type,
-                            VASurfaceAttribExternalBuffers *memory_attibute,
-                            int index)
+set_surface_info_from_extbuf(VADriverContextP tx,
+    struct object_surface *obj_surface,
+    VASurfaceAttribExternalBuffers *memory_attibute)
 {
-    struct i965_driver_data *i965 = i965_driver_data(ctx);
-
-    if (!memory_attibute ||
-        !memory_attibute->buffers ||
-        index >= memory_attibute->num_buffers)
-        return VA_STATUS_ERROR_INVALID_PARAMETER;
-
-    ASSERT_RET(obj_surface->orig_width == memory_attibute->width, VA_STATUS_ERROR_INVALID_PARAMETER);
-    ASSERT_RET(obj_surface->orig_height == memory_attibute->height, VA_STATUS_ERROR_INVALID_PARAMETER);
-    ASSERT_RET(memory_attibute->num_planes >= 1, VA_STATUS_ERROR_INVALID_PARAMETER);
+    ASSERT_RET(obj_surface->orig_width == memory_attibute->width,
+        VA_STATUS_ERROR_INVALID_PARAMETER);
+    ASSERT_RET(obj_surface->orig_height == memory_attibute->height,
+        VA_STATUS_ERROR_INVALID_PARAMETER);
+    ASSERT_RET(memory_attibute->num_planes >= 1,
+        VA_STATUS_ERROR_INVALID_PARAMETER);
 
     obj_surface->fourcc = memory_attibute->pixel_format;
     obj_surface->width = memory_attibute->pitches[0];
@@ -1175,6 +1169,27 @@ i965_suface_external_memory(VADriverContextP ctx,
 
         return VA_STATUS_ERROR_INVALID_PARAMETER;
     }
+    return VA_STATUS_SUCCESS;
+}
+
+static VAStatus
+i965_suface_external_memory(VADriverContextP ctx,
+                            struct object_surface *obj_surface,
+                            int external_memory_type,
+                            VASurfaceAttribExternalBuffers *memory_attibute,
+                            int index)
+{
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    VAStatus status;
+
+    if (!memory_attibute ||
+        !memory_attibute->buffers ||
+        index >= memory_attibute->num_buffers)
+        return VA_STATUS_ERROR_INVALID_PARAMETER;
+
+    status = set_surface_info_from_extbuf(ctx, obj_surface, memory_attibute);
+    if (status != VA_STATUS_SUCCESS)
+        return status;
 
     if (external_memory_type == I965_SURFACE_MEM_GEM_FLINK)
         obj_surface->bo = drm_intel_bo_gem_create_from_name(i965->intel.bufmgr,
@@ -1187,6 +1202,32 @@ i965_suface_external_memory(VADriverContextP ctx,
 
     if (!obj_surface->bo)
         return VA_STATUS_ERROR_INVALID_PARAMETER;
+
+    return VA_STATUS_SUCCESS;
+}
+
+static VAStatus
+i965_surface_from_userptr(VADriverContextP ctx,
+    struct object_surface *obj_surface,
+    VASurfaceAttribExternalBuffers *memory_attribute, int index)
+{
+    struct i965_driver_data * const i965 = i965_driver_data(ctx);
+    VAStatus status;
+
+    if (!memory_attribute || !memory_attribute->buffers)
+        return VA_STATUS_ERROR_INVALID_PARAMETER;
+    if (index >= memory_attribute->num_buffers)
+        return VA_STATUS_ERROR_MAX_NUM_EXCEEDED;
+
+    status = set_surface_info_from_extbuf(ctx, obj_surface, memory_attribute);
+    if (status != VA_STATUS_SUCCESS)
+        return status;
+
+    obj_surface->bo = intel_memman_import_userptr(&i965->intel,
+        "vaapi surface (userptr)", (void *)memory_attribute->buffers[index],
+        obj_surface->size, memory_attribute->flags);
+    if (!obj_surface->bo)
+        return VA_STATUS_ERROR_ALLOCATION_FAILED;
 
     return VA_STATUS_SUCCESS;
 }
@@ -1240,6 +1281,10 @@ i965_CreateSurfaces2(
                 memory_type = I965_SURFACE_MEM_DRM_PRIME; /* drm prime fd */
             else if (attrib_list[i].value.value.i == VA_SURFACE_ATTRIB_MEM_TYPE_VA)
                 memory_type = I965_SURFACE_MEM_NATIVE; /* va native memory, to be allocated */
+#ifdef HAVE_DRM_INTEL_USERPTR
+            else if (attrib_list[i].value.value.i == VA_SURFACE_ATTRIB_MEM_TYPE_USER_PTR)
+                memory_type = I965_SURFACE_MEM_USERPTR;
+#endif
             else
                 memory_type = 0;
         }
@@ -1344,6 +1389,10 @@ i965_CreateSurfaces2(
                                         memory_type,
                                         memory_attibute,
                                         i);
+            break;
+        case I965_SURFACE_MEM_USERPTR:
+            vaStatus = i965_surface_from_userptr(ctx, obj_surface,
+                memory_attibute, i);
             break;
         }
     }

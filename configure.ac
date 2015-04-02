@@ -76,6 +76,25 @@ LIBDRM_VERSION=libdrm_version
 PKG_CHECK_MODULES([DRM], [libdrm >= $LIBDRM_VERSION])
 AC_SUBST(LIBDRM_VERSION)
 
+AC_CACHE_CHECK([whether libdrm supports userptr allocations],
+    [ac_cv_libdrm_has_userptr],
+    [saved_CPPFLAGS="$CPPFLAGS"
+     saved_CFLAGS="$CFLAGS"
+     CPPFLAGS="$CPPFLAGS $DRM_CFLAGS"
+     LIBS="$LIBS $DRM_LIBS -ldrm_intel"
+     AC_TRY_LINK(
+         [#include <intel_bufmgr.h>],
+         [drm_intel_bo_alloc_userptr(NULL, NULL, NULL, 0, 0, 0, 0)],
+         [ac_cv_libdrm_has_userptr="yes"],
+         [ac_cv_libdrm_has_userptr="no"])
+     CPPFLAGS="$saved_CPPFLAGS"
+     LIBS="$saved_LIBS"]
+)
+if test "$ac_cv_libdrm_has_userptr" = "yes"; then
+    AC_DEFINE([HAVE_DRM_INTEL_USERPTR], [1],
+        [Defined to 1 if libdrm supports userptr allocations])
+fi
+
 dnl Check for gen4asm
 PKG_CHECK_MODULES(GEN4ASM, [intel-gen4asm >= 1.9], [gen4asm=yes], [gen4asm=no])
 AC_PATH_PROG([GEN4ASM], [intel-gen4asm])
